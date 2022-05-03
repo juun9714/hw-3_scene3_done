@@ -135,7 +135,7 @@ int dv_broadcast_dv_message(in_addr_t* myipaddrs)
 
 
   ushort len;
-  char net_addr[100]="";
+  char net_addr[200]="";
   for(int i=0;i<g_rt_table_size;i++){
     struct in_addr net;
     // len=sizeof(net_addr);
@@ -160,34 +160,6 @@ int dv_broadcast_dv_message(in_addr_t* myipaddrs)
   for(int j=0;j<g_port_table_size;j++){
     sendmessage(g_port_table[j].itf, myipaddrs[0], dst, len, DATA_DV, net_addr);//dvmsg send
   }
-
-
-  //g_port_table
-  //send_app_message(int sd, char* dst_name, ushort len, u_char type, char* dat)
-  //sendmessage(sd, g_myipaddrs[0], dst, len, type, dat);
-  //int sendmessage(int sd, in_addr_t myaddr, in_addr_t dst, ushort len, u_char type, char* dat)
-  /*
-  typedef struct _dv_entry
-  {
-    in_addr_t dest; //destination IP network address
-    int mask; //net mask of destination IP network address
-    int hop; //hop count from the router to the destination network
-  } dv_entry;
-
-
-  typedef struct __dvmsg
-  {
-    ushort cmd;
-    ushort len;
-    char * dat;
-  } DVMsg;
-
-  enum DV_COMMAND
-  {
-    DV_ADVERTISE = 0, //DV Advertisement Message
-    DV_BREAKAGE = 1   //DV Link Breakage Message
-  };
-  */
 
   return 1;   
 }
@@ -295,41 +267,49 @@ int dv_update_fw_table()
 
   /** FILL IN YOUR CODe */
   /** 1. update g_fw_table with g_rt_table
-         - if an entry corresponfding to a network address exists, update the "flag" of the forwarding entry
+         - if an entry corresponding to a network address exists, update the "flag" of the forwarding entry
          - otherwise, add a new forwarding entry to g_fw_table.
  
   *************************************** */
 
+  printf("@@@@@@@@@@dv_update_fw_table@@@@@@@@@@\n");
+
   int i,j,check;
 
   for(i=0;i<g_rt_table_size;i++){
+    printf("i is %d\n",i);
     check=0;
 
     for(j=0;j<g_fw_table_size;j++){
+      printf("j is %d\n",j);
       if(g_rt_table[i].dest==g_fw_table[j].dest){
         check=1;
+        printf("check is one\n");
         break;//next rt_table entry
       }
     }
 
     if(check==0){
+      printf("check is ZERO\n");
+
       g_fw_table[g_fw_table_size].dest=g_rt_table[i].dest;
       g_fw_table[g_fw_table_size].mask=g_rt_table[i].mask;
       g_fw_table[g_fw_table_size].next=g_rt_table[i].next;
       g_fw_table[g_fw_table_size].itf=g_rt_table[i].itf;
-      memcpy(g_fw_table[g_fw_table_size].itf_name, g_rt_table[i].itf_name, sizeof(g_rt_table[i].itf_name));
+      strncpy(g_fw_table[g_fw_table_size].itf_name, g_rt_table[i].itf_name,ITF_NAME_SIZE);
+      // memcpy(g_fw_table[g_fw_table_size].itf_name, g_rt_table[i].itf_name, sizeof(g_rt_table[i].itf_name));
       // g_fw_table[g_fw_table_size].itf_name=g_rt_table[i].itf_name;
       g_fw_table[g_fw_table_size].flag=1;
       g_fw_table_size++;
+      printf("g_fw_table_size increased to %d\n",g_fw_table_size);
     }
   }
-
-
   return 1;
 }
 
 int dv_update_routing_info(int sock, char* dat, int dat_len, in_addr_t src)
 { //update routing table and forwarding table
+  printf("@@@@@@@@@@dv_update_routing_info@@@@@@@@@@\n");
   int ret_val;
   dv_entry* dv;
   int dv_entry_num;
@@ -341,33 +321,6 @@ int dv_update_routing_info(int sock, char* dat, int dat_len, in_addr_t src)
         - set dv_entry_num to the actual number of DV entries contained in DV exchange message
 
       2. set cmd to the command described in DV exchange message
-   DVMsg dvmsg;
-    dvmsg.cmd=0;
-    dvmsg.len=sizeof(buf);
-    dvmsg.dat=(char*)dv;
-    in_addr_t dst = IP_BCASTADDR;
-    buf=(char*)&dvmsg;
-
- typedef struct _dv_entry
-  {
-    in_addr_t dest; //destination IP network address
-    int mask; //net mask of destination IP network address
-    int hop; //hop count from the router to the destination network
-  } dv_entry;
-
-
-  typedef struct __dvmsg
-  {
-    ushort cmd;
-    ushort len;
-    char * dat;
-  } DVMsg;
-
-  enum DV_COMMAND
-  {
-    DV_ADVERTISE = 0, //DV Advertisement Message
-    DV_BREAKAGE = 1   //DV Link Breakage Message
-  };
   ************************************************************/  
   int i=0;
   dv_entry_num=0;
@@ -380,6 +333,7 @@ int dv_update_routing_info(int sock, char* dat, int dat_len, in_addr_t src)
   char temp[20];
   i=0;
   int entry_id=0;
+
   while(dat[i]!='x'){
     char tmp_addr[20]="\0";
     char tmp_mask[6]="\0";
@@ -421,14 +375,13 @@ int dv_update_routing_info(int sock, char* dat, int dat_len, in_addr_t src)
   else
     cmd==DV_BREAKAGE;
 
-  ////
-  
   if(cmd == DV_ADVERTISE)
   {
     ret_val = dv_update_rt_table(sock, src, dv, dv_entry_num);
     if(ret_val != 1)
     {
       printf("dv_update_routing_info(): the DV exchange message has not been processed well\n");
+      free(dv);
       return 0;
     }
   }
@@ -440,12 +393,14 @@ int dv_update_routing_info(int sock, char* dat, int dat_len, in_addr_t src)
     if(ret_val != 1)
     {
       printf("dv_update_routing_info(): the DV exchange message has not been processed well\n");
+      free(dv);
       return 0;
     }
   }
   else
   {
     printf("dv_update_routing_info(): DV command (%d) is invalid!\n", cmd);
+    free(dv);
     return 0;
   }
 
@@ -454,9 +409,11 @@ int dv_update_routing_info(int sock, char* dat, int dat_len, in_addr_t src)
   if(ret_val != 1)
   {
     printf("dv_update_routing_info(): the forwarding table has not been updated well\n");
+    free(dv);
     return 0;
   }
 
+  free(dv);
   return 1;
 } 
 
@@ -484,8 +441,8 @@ int dv_forward(IPPkt* ippkt)
 
   src.s_addr = ippkt->src;
   dst.s_addr = ippkt->dst;
-  strcpy(src_addr, inet_ntoa(src)); 
-  strcpy(dst_addr, inet_ntoa(dst)); 
+  strncpy(src_addr, inet_ntoa(src), sizeof(src_addr)); 
+  strncpy(dst_addr, inet_ntoa(dst), sizeof(dst_addr)); 
   // printf("The router should forward the IP packet (source: %s, destination: %s)\n", src_addr, dst_addr);
 #endif
 
@@ -515,10 +472,8 @@ void dv_show_routing_table()
       char next_addr[16];
       dst.s_addr = g_rt_table[i].dest;
       next.s_addr = g_rt_table[i].next;
-      strcpy(dst_addr, inet_ntoa(dst));
-      strcpy(next_addr, inet_ntoa(next)); 
-      
-
+      strncpy(dst_addr, inet_ntoa(dst), sizeof(dst_addr));
+      strncpy(next_addr, inet_ntoa(next), sizeof(next_addr)); 
       
       printf("Entry %d : %s | %d | %d | %s | %d\n",i+1,dst_addr,g_rt_table[i].mask,g_rt_table[i].hop,next_addr,g_rt_table[i].itf);
     }
@@ -543,8 +498,8 @@ void dv_show_forwarding_table()
       char next_addr[16];
       dst.s_addr = g_fw_table[i].dest;
       next.s_addr = g_fw_table[i].next;
-      strcpy(dst_addr, inet_ntoa(dst));
-      strcpy(next_addr, inet_ntoa(next)); 
+      strncpy(dst_addr, inet_ntoa(dst), sizeof(dst_addr));
+      strncpy(next_addr, inet_ntoa(next), sizeof(next_addr)); 
 
       printf("Entry %d : %s | %d | %s | %d | %d\n",i+1,dst_addr,g_fw_table[i].mask,next_addr,g_fw_table[i].itf, g_fw_table[i].flag);
     }

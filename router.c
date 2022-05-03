@@ -327,8 +327,7 @@ int main(int argc, char *argv[])
             delete_lanname_entry(hubsock);
 
             /** FILL IN YOUR CODE in dv_broadcast_dv_message_for_link_breakage() function */
-            int ret=dv_broadcast_dv_message_for_link_breakage(hubsock, myipaddrs); //broadcast the routing information with DV exchange message containing the network address related to the link which is broken due to a hub crash.
-            printf("broadcast returned %d\n",ret);
+            dv_broadcast_dv_message_for_link_breakage(hubsock, myipaddrs); //broadcast the routing information with DV exchange message containing the network address related to the link which is broken due to a hub crash.
           }
 
           close(hubsock);

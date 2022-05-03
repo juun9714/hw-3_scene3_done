@@ -171,7 +171,7 @@ int dv_broadcast_dv_message(in_addr_t* myipaddrs)
     sendmessage(g_fw_table[j].itf, myipaddrs[0], dst, len, DATA_DV, net_addr);//dvmsg send
   }
 
-  printf("BROADCASTED NORMAL DV_MSG\n");
+  // printf("BROADCASTED NORMAL DV_MSG\n");
 
   return 1;   
 }
@@ -236,7 +236,6 @@ int dv_broadcast_dv_message_for_link_breakage(int sock, in_addr_t* myipaddrs) //
       // printf("down sock is %d and g_port_table[%d].itf is %d\n",down_sock, j, g_port_table[j].itf);
       // printf("RIGHT BEFORE SENDMESSAGE : down sock is %d and g_port_table[%d].itf is %d\n",down_sock, j, g_port_table[j].itf);
       sendmessage(g_port_table[j].itf, myipaddrs[0], dst, len, DATA_DV, net_addr);//dvmsg send
-      puts("\n\n");
     }
   }
 
@@ -328,17 +327,18 @@ int dv_update_rt_table_for_link_breakage(int sock, in_addr_t neighbor, dv_entry*
 
       sock을 기준으로 break하는게 아니라, dv_entry를 보고 break 해야지!
    *************************************************************/
-  printf("dv_entry_num %d\n",dv_entry_num);
+  // printf("dv_entry_num %d\n",dv_entry_num);
   for(int i=0;i<dv_entry_num;i++){
     for(int j=0;j<g_rt_table_size;j++){
       if(g_rt_table[j].dest==dv[i].dest){
-        printf("BEFORE : g_rt_table[%d].status = %d\n",j, g_rt_table[j].status);
         g_rt_table[j].status=RTE_DOWN;
-        printf("AFTER : g_rt_table[%d].status = %d\n",j, g_rt_table[j].status);
+      }
+
+      if(g_fw_table[j].dest==dv[i].dest){
+        g_fw_table[j].flag=-1;
       }
     }
   }
-  puts("\n");
   return 1;
 }
 
@@ -448,7 +448,7 @@ int dv_update_routing_info(int sock, char* dat, int dat_len, in_addr_t src)
     cmd=DV_BREAKAGE;
   }
 
-  printf("cmd %hd\n",cmd);
+  // printf("cmd %hd\n",cmd);
   if(cmd == DV_ADVERTISE)
   {
     ret_val = dv_update_rt_table(sock, src, dv, dv_entry_num);
@@ -600,7 +600,7 @@ int dv_get_sock_for_destination(int sock, in_addr_t src, in_addr_t dst)
   int i=0;
   
   for(i=0;i<g_fw_table_size;i++){
-    if(((dst & g_fw_table[i].mask)==g_fw_table[i].dest)&&g_fw_table[i].flag!=(-1)){
+    if(((dst & g_fw_table[i].mask)==g_fw_table[i].dest)&&g_fw_table[i].flag==1){
       sock=g_fw_table[i].itf;
       return sock;
     }

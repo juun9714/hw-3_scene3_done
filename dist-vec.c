@@ -137,8 +137,9 @@ int dv_broadcast_dv_message(in_addr_t* myipaddrs)
   ushort len;
   char net_addr[200]="";
   for(int i=0;i<g_rt_table_size;i++){
+    if(g_rt_table[i].status==RTE_DOWN)
+      continue;
     struct in_addr net;
-    // len=sizeof(net_addr);
     net.s_addr = g_rt_table[i].dest;
     strcat(net_addr, inet_ntoa(net));
     char mask[6];
@@ -157,14 +158,25 @@ int dv_broadcast_dv_message(in_addr_t* myipaddrs)
   len=strlen(net_addr);
   in_addr_t dst = IP_BCASTADDR;
 
-  for(int j=0;j<g_port_table_size;j++){
-    sendmessage(g_port_table[j].itf, myipaddrs[0], dst, len, DATA_DV, net_addr);//dvmsg send
+  // for(int j=0;j<g_port_table_size;j++){
+  //   printf("here^^\n");
+  //   sendmessage(g_port_table[j].itf, myipaddrs[0], dst, len, DATA_DV, net_addr);//dvmsg send
+  // }
+
+  for(int j=0;j<g_fw_table_size;j++){
+    if(g_fw_table[j].flag==(-1))
+      continue;
+
+    // printf("id is %d, here^^\n",j);
+    sendmessage(g_fw_table[j].itf, myipaddrs[0], dst, len, DATA_DV, net_addr);//dvmsg send
   }
+
+  printf("BROADCASTED NORMAL DV_MSG\n");
 
   return 1;   
 }
 
-int dv_broadcast_dv_message_for_link_breakage(int sock) //broadcast the routing information with DV exchange message containing the network address related to the link which is broken due to a hub crash.
+int dv_broadcast_dv_message_for_link_breakage(int sock, in_addr_t* myipaddrs) //broadcast the routing information with DV exchange message containing the network address related to the link which is broken due to a hub crash.
 {
   /** FILL IN YOUR CODE */
   /* 1. change the state of the network entry related to sock (or hub) from RTE_UP to RTE_DOWN and set the corresponding forwarding entry's flag to 0
@@ -173,6 +185,62 @@ int dv_broadcast_dv_message_for_link_breakage(int sock) //broadcast the routing 
 
      3. broadcast the DV message to every active network interface
   *****************************************************************/
+  int down_sock=sock;
+  ushort len;
+  char net_addr[200]="";
+  for(int i=0;i<g_rt_table_size;i++){
+    if(g_rt_table[i].itf==down_sock){
+      struct in_addr net;
+      net.s_addr = g_rt_table[i].dest;
+      strcat(net_addr, inet_ntoa(net));
+      char mask[6];
+      sprintf(mask,"%d",g_rt_table[i].mask);
+      char hop[3];
+      sprintf(hop,"%d",g_rt_table[i].hop);
+      strcat(net_addr, "/");
+      strcat(net_addr, mask);
+      strcat(net_addr, "/");
+      strcat(net_addr, hop);
+      strcat(net_addr, "\n");
+      break;
+    }
+  }
+  strcat(net_addr,"x");
+  strcat(net_addr,"1");
+  strcat(net_addr,"\0");
+  len=strlen(net_addr);
+  in_addr_t dst = IP_BCASTADDR;
+  // in_addr_t dst;
+  // g_port_table_size
+
+  for(int i=0;i<g_rt_table_size;i++){
+    if(g_rt_table[i].itf==sock){
+      // printf("BEFORE : g_rt_table[%d].status = %d\n",i, g_rt_table[i].status);
+      g_rt_table[i].status=RTE_DOWN;
+      // printf("AFTER : g_rt_table[%d].status = %d\n",i, g_rt_table[i].status);
+    }
+  }
+  // printf("update rt for link breakage\n");
+
+  for(int i=0;i<g_fw_table_size;i++){
+    if(g_fw_table[i].itf==sock){
+      // printf("BEFORE : g_fw_table[%d].flag = %d\n",i, g_fw_table[i].flag);
+      g_fw_table[i].flag=-1;
+      // printf("AFTER : g_fw_table[%d].flag = %d\n",i, g_fw_table[i].flag);
+    }
+  }
+  // printf("update fw for link breakage\n");
+
+  for(int j=0;j<g_port_table_size;j++){
+    if(g_port_table[j].itf!=down_sock){
+      // printf("down sock is %d and g_port_table[%d].itf is %d\n",down_sock, j, g_port_table[j].itf);
+      // printf("RIGHT BEFORE SENDMESSAGE : down sock is %d and g_port_table[%d].itf is %d\n",down_sock, j, g_port_table[j].itf);
+      sendmessage(g_port_table[j].itf, myipaddrs[0], dst, len, DATA_DV, net_addr);//dvmsg send
+      puts("\n\n");
+    }
+  }
+
+  // printf("before return\n");
 
   return 1;
 }
@@ -253,12 +321,24 @@ int dv_update_rt_table(int sock, in_addr_t neighbor, dv_entry* dv, int dv_entry_
 
 int dv_update_rt_table_for_link_breakage(int sock, in_addr_t neighbor, dv_entry* dv, int dv_entry_num)
 { //update g_rt_table with dv entry sent by neighbor which becomes unreachable network due the link breakage (e.g., hub is down)
-
   /** FILL IN YOUR CODE */
   /** 1. set the "status" of the routing entry corresponding to the network related to the broken link
          to "RTE_DOWN".
-   *************************************************************/
 
+
+      sock을 기준으로 break하는게 아니라, dv_entry를 보고 break 해야지!
+   *************************************************************/
+  printf("dv_entry_num %d\n",dv_entry_num);
+  for(int i=0;i<dv_entry_num;i++){
+    for(int j=0;j<g_rt_table_size;j++){
+      if(g_rt_table[j].dest==dv[i].dest){
+        printf("BEFORE : g_rt_table[%d].status = %d\n",j, g_rt_table[j].status);
+        g_rt_table[j].status=RTE_DOWN;
+        printf("AFTER : g_rt_table[%d].status = %d\n",j, g_rt_table[j].status);
+      }
+    }
+  }
+  puts("\n");
   return 1;
 }
 
@@ -288,8 +368,6 @@ int dv_update_fw_table()
       g_fw_table[g_fw_table_size].next=g_rt_table[i].next;
       g_fw_table[g_fw_table_size].itf=g_rt_table[i].itf;
       strncpy(g_fw_table[g_fw_table_size].itf_name, g_rt_table[i].itf_name,ITF_NAME_SIZE);
-      // memcpy(g_fw_table[g_fw_table_size].itf_name, g_rt_table[i].itf_name, sizeof(g_rt_table[i].itf_name));
-      // g_fw_table[g_fw_table_size].itf_name=g_rt_table[i].itf_name;
       g_fw_table[g_fw_table_size].flag=1;
       g_fw_table_size++;
     }
@@ -357,13 +435,20 @@ int dv_update_routing_info(int sock, char* dat, int dat_len, in_addr_t src)
     }
   }
 
+  dv_entry_num=entry_id;
+
   //ADVERTISE? OR BREAKAGE?
   i++;
-  if(dat[i]=='0')
-    cmd==DV_ADVERTISE;
-  else
-    cmd==DV_BREAKAGE;
+  char tmp[2]="";
+  tmp[0]=dat[i];
 
+  if(!strncmp(tmp,"0",1))
+    cmd=DV_ADVERTISE;
+  else if(!strncmp(tmp,"1",1)){
+    cmd=DV_BREAKAGE;
+  }
+
+  printf("cmd %hd\n",cmd);
   if(cmd == DV_ADVERTISE)
   {
     ret_val = dv_update_rt_table(sock, src, dv, dv_entry_num);
@@ -377,7 +462,7 @@ int dv_update_routing_info(int sock, char* dat, int dat_len, in_addr_t src)
   else if(cmd == DV_BREAKAGE)
   {
     /** FILL IN YOUR CODE in dv_update_rt_table_for_link_breakage() function */
-
+    printf("LINK BREAKAGE\n");
     ret_val = dv_update_rt_table_for_link_breakage(sock, src, dv, dv_entry_num);
     if(ret_val != 1)
     {
@@ -454,7 +539,7 @@ void dv_show_routing_table()
   /** FILL IN YOUR CODE for show the routing table */
   if(g_rt_table_size>0){
     printf("THIS IS THE ROUTING TABLE\n");
-    printf("         NetAddr     | Mask | Hop | Next_HOP | Interface\n");
+    printf("         NetAddr     | Mask | Hop | Next_HOP | Interface | STATUS\n");
     for(int i=0;i<g_rt_table_size;i++){
       struct in_addr dst, next;
       char dst_addr[16];
@@ -464,7 +549,7 @@ void dv_show_routing_table()
       strncpy(dst_addr, inet_ntoa(dst), sizeof(dst_addr));
       strncpy(next_addr, inet_ntoa(next), sizeof(next_addr)); 
       
-      printf("Entry %d : %s | %d | %d | %s | %d\n",i+1,dst_addr,g_rt_table[i].mask,g_rt_table[i].hop,next_addr,g_rt_table[i].itf);
+      printf("Entry %d : %s | %d | %d | %s | %d | %d\n",i+1,dst_addr,g_rt_table[i].mask,g_rt_table[i].hop,next_addr,g_rt_table[i].itf,g_rt_table[i].status);
     }
 
   }
@@ -515,7 +600,7 @@ int dv_get_sock_for_destination(int sock, in_addr_t src, in_addr_t dst)
   int i=0;
   
   for(i=0;i<g_fw_table_size;i++){
-    if((dst & g_fw_table[i].mask)==g_fw_table[i].dest){
+    if(((dst & g_fw_table[i].mask)==g_fw_table[i].dest)&&g_fw_table[i].flag!=(-1)){
       sock=g_fw_table[i].itf;
       return sock;
     }

@@ -125,9 +125,9 @@ main(int argc, char *argv[])
 	  }
 
 #ifdef _DEBUG
-	  printf("sent --> ");
+	  // printf("sent --> ");
 	  //pkt->len = ntohs(pkt->len); //convert network byte-order into host byte-order
-	  dumpethpkt(pkt);
+	  // dumpethpkt(pkt);
 #endif
 
 	  /* free the pkt */

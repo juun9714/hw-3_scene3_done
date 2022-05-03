@@ -645,6 +645,7 @@ int sendethpkt(int sd, EthPkt *ethpkt)
   memcpy(ptr, (char *) ethpkt->dat, ethpkt_length);
 
   /* send the packet */
+  // printf("in sendethpkt sock is %d\n",sd);
   ret_val = write(sd, buf, len);
   if (ret_val == -1) {
     perror("write() error!\n");
@@ -710,7 +711,7 @@ int sendmessage(int sd, in_addr_t myaddr, in_addr_t dst, ushort len, u_char type
 
   /* write the data */
   memcpy(ippkt->dat, dat, ippkt->len);  
-
+  // printf("in sendmessage socket is %d\n",sd);
   ret_val = sendippkt(sd, ippkt);
   if(ret_val != 1)
   {
@@ -982,7 +983,7 @@ int sendippkt(int sd, IPPkt *ippkt)
   } //end of else if-1
   else
   {
-    printf("sendippkt(): Unknow data type (%d)!\n", ippkt->type);
+    printf("sendippkt(): Unknown data type (%d)!\n", ippkt->type);
     return 0;
   }
   
@@ -1000,6 +1001,7 @@ int sendippkt(int sd, IPPkt *ippkt)
   memcpy(ethpkt->dat, buf, len); 
 
   /* send the packet to MAC layer */
+  // printf("sendippkt sock is %d\n",sd);
   ret_val = sendethpkt(sd, ethpkt);
   if (ret_val == -1) {
     perror("sendippkt(): write() error!\n");

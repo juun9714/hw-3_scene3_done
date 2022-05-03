@@ -63,7 +63,6 @@ int processdata(int sock, char* dat, int len, int type, in_addr_t src_addr)
   }
   else if(type == DATA_DV)
   { /** FILL IN YOUR CODE in dv_update_routing_info() function */
-    printf("############BEFORE dv_update_routing_info############\n");
 		dv_update_routing_info(sock, dat, len, src_addr);
    /** the memory should be freed */
     free(dat);
@@ -309,8 +308,6 @@ int main(int argc, char *argv[])
       hubsock = sds[i];
 
       if (FD_ISSET(hubsock, &readset)) {//if-1
-        printf("FROM HUB : %d\n",hubsock);
-
         in_addr_t src_addr; //source IP address of the received packet
         ushort len; //data length //@ it should be "ushort", not "int" in order to match with "len" field in IP header 
         

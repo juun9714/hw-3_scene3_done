@@ -271,27 +271,18 @@ int dv_update_fw_table()
          - otherwise, add a new forwarding entry to g_fw_table.
  
   *************************************** */
-
-  printf("@@@@@@@@@@dv_update_fw_table@@@@@@@@@@\n");
-
   int i,j,check;
-
   for(i=0;i<g_rt_table_size;i++){
-    printf("i is %d\n",i);
     check=0;
 
     for(j=0;j<g_fw_table_size;j++){
-      printf("j is %d\n",j);
       if(g_rt_table[i].dest==g_fw_table[j].dest){
         check=1;
-        printf("check is one\n");
         break;//next rt_table entry
       }
     }
 
     if(check==0){
-      printf("check is ZERO\n");
-
       g_fw_table[g_fw_table_size].dest=g_rt_table[i].dest;
       g_fw_table[g_fw_table_size].mask=g_rt_table[i].mask;
       g_fw_table[g_fw_table_size].next=g_rt_table[i].next;
@@ -301,7 +292,6 @@ int dv_update_fw_table()
       // g_fw_table[g_fw_table_size].itf_name=g_rt_table[i].itf_name;
       g_fw_table[g_fw_table_size].flag=1;
       g_fw_table_size++;
-      printf("g_fw_table_size increased to %d\n",g_fw_table_size);
     }
   }
   return 1;
@@ -309,7 +299,6 @@ int dv_update_fw_table()
 
 int dv_update_routing_info(int sock, char* dat, int dat_len, in_addr_t src)
 { //update routing table and forwarding table
-  printf("@@@@@@@@@@dv_update_routing_info@@@@@@@@@@\n");
   int ret_val;
   dv_entry* dv;
   int dv_entry_num;
